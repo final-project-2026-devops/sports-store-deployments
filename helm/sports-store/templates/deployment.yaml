@@ -1,0 +1,40 @@
+{{- range $name, $svc := .Values.services }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $name }}
+  namespace: {{ $.Values.namespace }}
+  labels:
+    {{- include "sports-store.labels" $ | nindent 4 }}
+    app.kubernetes.io/component: {{ $name }}
+spec:
+  replicas: {{ $svc.replicas }}
+  selector:
+    matchLabels:
+      {{- include "sports-store.selectorLabels" (dict "root" $ "service" $name) | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "sports-store.selectorLabels" (dict "root" $ "service" $name) | nindent 8 }}
+    spec:
+      serviceAccountName: {{ include "sports-store.serviceAccountName" $name }}
+      containers:
+        - name: {{ $name }}
+          image: "{{ $svc.image.repository }}:{{ $svc.image.tag }}"
+          ports:
+            - containerPort: {{ $svc.port }}
+          {{- if or $svc.env $svc.usesSecrets }}
+          envFrom:
+            {{- if $svc.env }}
+            - configMapRef:
+                name: {{ $name }}-config
+            {{- end }}
+            {{- if $svc.usesSecrets }}
+            - secretRef:
+                name: app-secrets
+            {{- end }}
+          {{- end }}
+          resources:
+            {{- toYaml $svc.resources | nindent 12 }}
+---
+{{- end }}

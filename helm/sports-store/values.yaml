@@ -1,0 +1,151 @@
+# Default values for the sports-store chart.
+# Local/dev defaults live here. A separate values-aws.yaml (added Tuesday, once
+# EKS + real images + real IRSA ARNs exist) overrides these for the real cluster —
+# the chart's templates never change between the two, only this data does.
+
+namespace: sports-store
+
+# Shared secret env, applied to every service with usesSecrets: true (see below).
+# Placeholder for local kind testing only — real deploys override this at install
+# time (helm upgrade --set-string secrets.jwtSecret=$JWT_SECRET), never committed.
+# See VALUES-SCHEMA.md for the full env-var schema and why these names were chosen.
+secrets:
+  jwtSecret: "dev-secret-change-me"
+
+# One entry per service. Adding a service to the platform means adding an entry
+# here — the templates under templates/ range over this map, nothing to copy-paste.
+#
+# Placeholder-image state (today): all 7 services point at plain nginx — real
+# images, and real IRSA role ARNs, land via values-aws.yaml once Eli hands off
+# EKS/ECR/IRSA outputs and CI is building real images. Chart mechanics, env-var
+# wiring, and ConfigMap/Secret plumbing are already real, not placeholders.
+services:
+  auth-service:
+    image:
+      repository: nginx
+      tag: "1.27"
+    replicas: 1
+    port: 80
+    usesSecrets: true
+    env:
+      AWS_REGION: us-east-1
+      DYNAMODB_TABLE_NAME: auth-service-table
+      ACCESS_TOKEN_EXPIRE_MINUTES: "60"
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        cpu: 200m
+        memory: 128Mi
+    serviceAccount:
+      # eks.amazonaws.com/role-arn annotation — empty locally (kind has no IRSA),
+      # filled in via values-aws.yaml on the real cluster.
+      roleArn: ""
+
+  catalog-service:
+    image:
+      repository: nginx
+      tag: "1.27"
+    replicas: 1
+    port: 80
+    usesSecrets: true
+    env:
+      AWS_REGION: us-east-1
+      DYNAMODB_TABLE_NAME: catalog-service-table
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        cpu: 200m
+        memory: 128Mi
+    serviceAccount:
+      roleArn: ""
+
+  cart-service:
+    image:
+      repository: nginx
+      tag: "1.27"
+    replicas: 1
+    port: 80
+    usesSecrets: true
+    env:
+      AWS_REGION: us-east-1
+      DYNAMODB_TABLE_NAME: cart-service-table
+      CATALOG_URL: http://catalog-service
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        cpu: 200m
+        memory: 128Mi
+    serviceAccount:
+      roleArn: ""
+
+  order-service:
+    image:
+      repository: nginx
+      tag: "1.27"
+    replicas: 1
+    port: 80
+    usesSecrets: true
+    env:
+      AWS_REGION: us-east-1
+      DYNAMODB_TABLE_NAME: order-service-table
+      CART_URL: http://cart-service
+      CATALOG_URL: http://catalog-service
+      PAYMENT_URL: http://payment-service
+      SHIPPING_FLAT_RATE: "5.99"
+      FREE_SHIPPING_THRESHOLD: "50"
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        cpu: 200m
+        memory: 128Mi
+    serviceAccount:
+      roleArn: ""
+
+  payment-service:
+    image:
+      repository: nginx
+      tag: "1.27"
+    replicas: 1
+    port: 80
+    usesSecrets: true
+    env:
+      AWS_REGION: us-east-1
+      DYNAMODB_TABLE_NAME: payment-service-table
+      PAYMENT_FAILURE_SUFFIX: "0000"
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        cpu: 200m
+        memory: 128Mi
+    serviceAccount:
+      roleArn: ""
+
+  gateway:
+    image:
+      repository: nginx
+      tag: "1.27"
+    replicas: 1
+    port: 80
+    # No DynamoDB, no JWT verification of its own — just proxies to the backend
+    # services, so it gets neither the per-service ConfigMap nor app-secrets.
+    usesSecrets: false
+    env: {}
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        cpu: 200m
+        memory: 128Mi
+    serviceAccount:
+      roleArn: ""
