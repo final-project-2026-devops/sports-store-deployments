@@ -1,0 +1,51 @@
+# Default values for the sports-store chart.
+# Local/dev defaults live here. A separate values-aws.yaml (added Tuesday, once
+# EKS + real images + real IRSA ARNs exist) overrides these for the real cluster —
+# the chart's templates never change between the two, only this data does.
+
+namespace: sports-store
+
+# One entry per service. Adding a service to the platform means adding an entry
+# here — the templates under templates/ range over this map, nothing to copy-paste.
+#
+# Placeholder-image state (today, Sunday): only auth-service and catalog-service
+# are populated, both pointed at plain nginx, just to prove the chart mechanics
+# (helpers, range-based templates, install/upgrade/rollback) work end to end.
+# The remaining 4 services + gateway, real images, ConfigMap/Secret env, and real
+# IRSA role ARNs land Monday once Eli's outputs doc is in.
+services:
+  auth-service:
+    image:
+      repository: nginx
+      tag: "1.27"
+    replicas: 1
+    port: 80
+    env: {}
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        cpu: 200m
+        memory: 128Mi
+    serviceAccount:
+      # eks.amazonaws.com/role-arn annotation — empty locally (kind has no IRSA),
+      # filled in via values-aws.yaml on the real cluster.
+      roleArn: ""
+
+  catalog-service:
+    image:
+      repository: nginx
+      tag: "1.27"
+    replicas: 1
+    port: 80
+    env: {}
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        cpu: 200m
+        memory: 128Mi
+    serviceAccount:
+      roleArn: ""
