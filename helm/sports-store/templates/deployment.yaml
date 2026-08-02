@@ -23,11 +23,15 @@ spec:
           image: "{{ $svc.image.repository }}:{{ $svc.image.tag }}"
           ports:
             - containerPort: {{ $svc.port }}
-          {{- with $svc.env }}
-          env:
-            {{- range $k, $v := . }}
-            - name: {{ $k }}
-              value: {{ $v | quote }}
+          {{- if or $svc.env $svc.usesSecrets }}
+          envFrom:
+            {{- if $svc.env }}
+            - configMapRef:
+                name: {{ $name }}-config
+            {{- end }}
+            {{- if $svc.usesSecrets }}
+            - secretRef:
+                name: app-secrets
             {{- end }}
           {{- end }}
           resources:
