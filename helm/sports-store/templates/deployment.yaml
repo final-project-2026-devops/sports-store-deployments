@@ -17,7 +17,7 @@ spec:
       labels:
         {{- include "sports-store.selectorLabels" (dict "root" $ "service" $name) | nindent 8 }}
     spec:
-      serviceAccountName: {{ $name }}
+      serviceAccountName: {{ include "sports-store.serviceAccountName" $name }}
       containers:
         - name: {{ $name }}
           image: "{{ $svc.image.repository }}:{{ $svc.image.tag }}"

@@ -25,3 +25,14 @@ with the map value, so the helper needs root and service passed in explicitly.
 app.kubernetes.io/name: {{ .root.Chart.Name }}
 app.kubernetes.io/component: {{ .service }}
 {{- end -}}
+
+{{/*
+ServiceAccount name for a given values.yaml service key (e.g. "auth-service"
+-> "auth-service-sa"). sports-store-infrastructure's dynamodb.tf hardcodes its
+IRSA trust policy to "<service>-service-sa" (namespace_service_accounts), so
+this isn't a free naming choice — the chart has to match Terraform. Call with
+the service name, e.g. {{ include "sports-store.serviceAccountName" "auth-service" }}.
+*/}}
+{{- define "sports-store.serviceAccountName" -}}
+{{- printf "%s-sa" . -}}
+{{- end -}}
