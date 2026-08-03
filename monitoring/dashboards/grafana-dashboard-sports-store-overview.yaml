@@ -1,0 +1,137 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-sports-store-overview
+  namespace: monitoring
+  labels:
+    # kube-prometheus-stack's Grafana sidecar watches for this label and
+    # auto-imports any ConfigMap carrying it — no manual upload needed.
+    grafana_dashboard: "1"
+data:
+  sports-store-overview.json: |
+    {
+      "title": "Sports Store Overview",
+      "uid": "sports-store-overview",
+      "timezone": "browser",
+      "schemaVersion": 39,
+      "refresh": "30s",
+      "panels": [
+        {
+          "id": 1,
+          "title": "Pod Status (running / pending / crashlooping)",
+          "type": "stat",
+          "gridPos": { "h": 6, "w": 24, "x": 0, "y": 0 },
+          "targets": [
+            {
+              "expr": "sum(kube_pod_status_phase{namespace=\"sports-store\"}) by (phase)",
+              "legendFormat": "{{phase}}"
+            }
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Pod Restarts (last 1h)",
+          "type": "timeseries",
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 6 },
+          "targets": [
+            {
+              "expr": "increase(kube_pod_container_status_restarts_total{namespace=\"sports-store\"}[1h])",
+              "legendFormat": "{{pod}}"
+            }
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Node CPU Usage",
+          "type": "timeseries",
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 6 },
+          "targets": [
+            {
+              "expr": "100 - (avg by(instance) (rate(node_cpu_seconds_total{mode=\"idle\"}[5m])) * 100)",
+              "legendFormat": "{{instance}}"
+            }
+          ]
+        },
+        {
+          "id": 4,
+          "title": "Node Memory Usage %",
+          "type": "timeseries",
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 14 },
+          "targets": [
+            {
+              "expr": "(1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100",
+              "legendFormat": "{{instance}}"
+            }
+          ]
+        },
+        {
+          "id": 5,
+          "title": "Per-Service Pod CPU (sports-store namespace)",
+          "type": "timeseries",
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 14 },
+          "targets": [
+            {
+              "expr": "sum(rate(container_cpu_usage_seconds_total{namespace=\"sports-store\"}[5m])) by (pod)",
+              "legendFormat": "{{pod}}"
+            }
+          ]
+        },
+        {
+          "id": 6,
+          "title": "Per-Service Pod Memory (sports-store namespace)",
+          "type": "timeseries",
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 22 },
+          "targets": [
+            {
+              "expr": "sum(container_memory_working_set_bytes{namespace=\"sports-store\"}) by (pod)",
+              "legendFormat": "{{pod}}"
+            }
+          ]
+        },
+        {
+          "id": 100,
+          "title": "--- RED metrics below: need /metrics endpoint per service (Eli/Yotam) ---",
+          "type": "text",
+          "gridPos": { "h": 2, "w": 24, "x": 0, "y": 30 },
+          "options": {
+            "content": "Panels below assume prometheus-fastapi-instrumentator's default metric names (http_requests_total, http_request_duration_seconds). Once /metrics is scraped via ServiceMonitor, these activate automatically — no dashboard changes needed if names match."
+          }
+        },
+        {
+          "id": 7,
+          "title": "Request Rate (req/s) per service [needs /metrics]",
+          "type": "timeseries",
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 32 },
+          "targets": [
+            {
+              "expr": "sum(rate(http_requests_total{namespace=\"sports-store\"}[5m])) by (service)",
+              "legendFormat": "{{service}}"
+            }
+          ]
+        },
+        {
+          "id": 8,
+          "title": "Error Rate % (5xx) per service [needs /metrics]",
+          "type": "timeseries",
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 32 },
+          "targets": [
+            {
+              "expr": "sum(rate(http_requests_total{namespace=\"sports-store\", status=~\"5..\"}[5m])) by (service) / sum(rate(http_requests_total{namespace=\"sports-store\"}[5m])) by (service) * 100",
+              "legendFormat": "{{service}}"
+            }
+          ]
+        },
+        {
+          "id": 9,
+          "title": "p95 Latency per service [needs /metrics]",
+          "type": "timeseries",
+          "gridPos": { "h": 8, "w": 24, "x": 0, "y": 40 },
+          "targets": [
+            {
+              "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{namespace=\"sports-store\"}[5m])) by (le, service))",
+              "legendFormat": "{{service}}"
+            }
+          ]
+        }
+      ]
+    }
