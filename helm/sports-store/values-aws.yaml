@@ -1,0 +1,29 @@
+# Overrides for the real EKS cluster (cloudcart-production, account
+# 977237815280) — layered on top of values.yaml with `helm upgrade -f
+# values-aws.yaml`. Real IRSA role ARNs pulled from sports-store-Terraform's
+# `dynamodb_service_irsa_role_arns` output; everything else (images, secrets)
+# keeps using values.yaml / --set-string until those are ready.
+#
+# KNOWN GAP: these IRSA trust policies are scoped to the Terraform
+# `k8s_namespace` variable, which currently defaults to "cloudcart" and was
+# never overridden to "sports-store" in terraform.tfvars (see NAMING.md).
+# Until that variable is fixed and re-applied, pods running in the
+# "sports-store" namespace won't match the trust policy condition and IRSA
+# will still fail even with these ARNs wired in. Flagged separately — this
+# file alone does not make IRSA end-to-end functional.
+services:
+  auth-service:
+    serviceAccount:
+      roleArn: arn:aws:iam::977237815280:role/cloudcart-production-auth-service-irsa
+  catalog-service:
+    serviceAccount:
+      roleArn: arn:aws:iam::977237815280:role/cloudcart-production-catalog-service-irsa
+  cart-service:
+    serviceAccount:
+      roleArn: arn:aws:iam::977237815280:role/cloudcart-production-cart-service-irsa
+  order-service:
+    serviceAccount:
+      roleArn: arn:aws:iam::977237815280:role/cloudcart-production-order-service-irsa
+  payment-service:
+    serviceAccount:
+      roleArn: arn:aws:iam::977237815280:role/cloudcart-production-payment-service-irsa
