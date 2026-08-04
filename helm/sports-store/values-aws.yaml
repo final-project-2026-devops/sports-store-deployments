@@ -19,14 +19,14 @@ services:
   auth-service:
     image:
       repository: 977237815280.dkr.ecr.us-east-1.amazonaws.com/sports-store-auth-service
-      tag: "0.8.0-40788e9"
+      tag: "0.10.0-dff6011"
     port: 8000
     serviceAccount:
       roleArn: arn:aws:iam::977237815280:role/cloudcart-production-auth-service-irsa
   catalog-service:
     image:
       repository: 977237815280.dkr.ecr.us-east-1.amazonaws.com/sports-store-catalog-service
-      tag: "0.7.0-eed7ede"
+      tag: "0.9.0-ef83ecd"
     port: 8000
     env:
       DYNAMODB_VARIANTS_TABLE_NAME: catalog-service-variants-table
@@ -35,21 +35,21 @@ services:
   cart-service:
     image:
       repository: 977237815280.dkr.ecr.us-east-1.amazonaws.com/sports-store-cart-service
-      tag: "0.7.0-0024957"
+      tag: "0.9.0-e7cc43f"
     port: 8000
     serviceAccount:
       roleArn: arn:aws:iam::977237815280:role/cloudcart-production-cart-service-irsa
   order-service:
     image:
       repository: 977237815280.dkr.ecr.us-east-1.amazonaws.com/sports-store-order-service
-      tag: "0.6.0-068df29"
+      tag: "0.9.0-5e71c5c"
     port: 8000
     serviceAccount:
       roleArn: arn:aws:iam::977237815280:role/cloudcart-production-order-service-irsa
   payment-service:
     image:
       repository: 977237815280.dkr.ecr.us-east-1.amazonaws.com/sports-store-payment-service
-      tag: "0.7.0-1eaa969"
+      tag: "0.9.0-22574f6"
     port: 8000
     serviceAccount:
       roleArn: arn:aws:iam::977237815280:role/cloudcart-production-payment-service-irsa
