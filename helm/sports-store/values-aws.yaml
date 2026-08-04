@@ -1,29 +1,64 @@
 # Overrides for the real EKS cluster (cloudcart-production, account
 # 977237815280) — layered on top of values.yaml with `helm upgrade -f
 # values-aws.yaml`. Real IRSA role ARNs pulled from sports-store-Terraform's
-# `dynamodb_service_irsa_role_arns` output; everything else (images, secrets)
-# keeps using values.yaml / --set-string until those are ready.
+# `dynamodb_service_irsa_role_arns` output. Real ECR images + tags below.
+# secrets.jwtSecret is still never committed here — pass at install time
+# with --set-string secrets.jwtSecret=$JWT_SECRET.
 #
-# KNOWN GAP: these IRSA trust policies are scoped to the Terraform
-# `k8s_namespace` variable, which currently defaults to "cloudcart" and was
-# never overridden to "sports-store" in terraform.tfvars (see NAMING.md).
-# Until that variable is fixed and re-applied, pods running in the
-# "sports-store" namespace won't match the trust policy condition and IRSA
-# will still fail even with these ARNs wired in. Flagged separately — this
-# file alone does not make IRSA end-to-end functional.
+# k8s_namespace has since been fixed to "sports-store" in Terraform and
+# re-applied, so the gap noted in the original version of this file no
+# longer applies — the IRSA trust policies now match this namespace.
+#
+# Port override: the 5 backend services' real images (FastAPI/uvicorn)
+# listen on 8000, not the placeholder nginx image's port 80 that
+# values.yaml defaults to. Overriding here changes both containerPort and
+# the Service's port/targetPort (see templates/deployment.yaml,
+# templates/service.yaml). gateway keeps port 80 — its image is nginx,
+# EXPOSE 80 per its Dockerfile.
 services:
   auth-service:
+    image:
+      repository: 977237815280.dkr.ecr.us-east-1.amazonaws.com/sports-store-auth-service
+      tag: "0.8.0-40788e9"
+    port: 8000
     serviceAccount:
       roleArn: arn:aws:iam::977237815280:role/cloudcart-production-auth-service-irsa
   catalog-service:
+    image:
+      repository: 977237815280.dkr.ecr.us-east-1.amazonaws.com/sports-store-catalog-service
+      tag: "0.7.0-eed7ede"
+    port: 8000
+    env:
+      DYNAMODB_VARIANTS_TABLE_NAME: catalog-service-variants-table
     serviceAccount:
       roleArn: arn:aws:iam::977237815280:role/cloudcart-production-catalog-service-irsa
   cart-service:
+    image:
+      repository: 977237815280.dkr.ecr.us-east-1.amazonaws.com/sports-store-cart-service
+      tag: "0.7.0-0024957"
+    port: 8000
     serviceAccount:
       roleArn: arn:aws:iam::977237815280:role/cloudcart-production-cart-service-irsa
   order-service:
+    image:
+      repository: 977237815280.dkr.ecr.us-east-1.amazonaws.com/sports-store-order-service
+      tag: "0.6.0-068df29"
+    port: 8000
     serviceAccount:
       roleArn: arn:aws:iam::977237815280:role/cloudcart-production-order-service-irsa
   payment-service:
+    image:
+      repository: 977237815280.dkr.ecr.us-east-1.amazonaws.com/sports-store-payment-service
+      tag: "0.7.0-1eaa969"
+    port: 8000
     serviceAccount:
       roleArn: arn:aws:iam::977237815280:role/cloudcart-production-payment-service-irsa
+  gateway:
+    image:
+      repository: 977237815280.dkr.ecr.us-east-1.amazonaws.com/sports-store-gateway
+      tag: "0.6.0-9b5433c"
+
+# Binds the gateway Service to the ALB target group Eli's Terraform already
+# created (not a K8s Ingress — the ALB isn't Ingress-managed). Only set here,
+# not in values.yaml, so local kind installs don't try to create this.
+gatewayTargetGroupArn: arn:aws:elasticloadbalancing:us-east-1:977237815280:targetgroup/cloudcart-production-gateway-tg/fe6e5dedf9bd6908

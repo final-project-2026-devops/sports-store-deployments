@@ -1,0 +1,13 @@
+{{- if .Values.gatewayTargetGroupArn }}
+apiVersion: elbv2.k8s.aws/v1beta1
+kind: TargetGroupBinding
+metadata:
+  name: gateway
+  namespace: {{ .Values.namespace }}
+spec:
+  serviceRef:
+    name: gateway
+    port: 80
+  targetGroupARN: {{ .Values.gatewayTargetGroupArn }}
+  targetType: ip
+{{- end }}
