@@ -9,6 +9,15 @@ spec:
   selector:
     matchLabels:
       app.kubernetes.io/name: sports-store
+    # gateway is the NGINX proxy — its nginx.conf exposes only the /api/*
+    # location blocks, no /metrics and no stub_status, so scraping it would
+    # leave a permanently DOWN target. The five FastAPI services all mount
+    # /metrics via Instrumentator().instrument(app).expose(app).
+    matchExpressions:
+      - key: app.kubernetes.io/component
+        operator: NotIn
+        values:
+          - gateway
   namespaceSelector:
     matchNames:
       - sports-store
