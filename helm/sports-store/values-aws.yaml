@@ -37,6 +37,11 @@ services:
       repository: 977237815280.dkr.ecr.us-east-1.amazonaws.com/sports-store-cart-service
       tag: "0.9.0-e7cc43f"
     port: 8000
+    # values.yaml's CATALOG_URL has no port (assumed the placeholder nginx
+    # image's port 80) - the real image listens on 8000, so this must be
+    # overridden here or cart-service can't reach catalog-service at all.
+    env:
+      CATALOG_URL: http://catalog-service:8000
     serviceAccount:
       roleArn: arn:aws:iam::977237815280:role/cloudcart-production-cart-service-irsa
   order-service:
@@ -44,6 +49,12 @@ services:
       repository: 977237815280.dkr.ecr.us-east-1.amazonaws.com/sports-store-order-service
       tag: "0.9.0-5e71c5c"
     port: 8000
+    # Same port gap as cart-service, for all three of order-service's
+    # downstream calls.
+    env:
+      CART_URL: http://cart-service:8000
+      CATALOG_URL: http://catalog-service:8000
+      PAYMENT_URL: http://payment-service:8000
     serviceAccount:
       roleArn: arn:aws:iam::977237815280:role/cloudcart-production-order-service-irsa
   payment-service:
