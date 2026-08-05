@@ -1,0 +1,132 @@
+# DRAFT — not applied yet. Do NOT `kubectl apply` this until:
+#   1. Task 2 (kube-prometheus-stack) is Synced/Healthy — needs the AWS EBS CSI
+#      driver installed first (Eli), otherwise Loki's PVC will also hang Pending.
+#   2. Chart versions below are verified/pinned against the Grafana Helm repo.
+#   3. Node pod-count capacity is addressed — this adds ~3+ pods and both t3.small
+#      nodes are currently at their max-pods (11) limit.
+#
+# Pattern mirrors argocd-apps/kube-prometheus-stack.yaml: Helm chart from the
+# Grafana Helm repo, monitoring namespace, automated sync + CreateNamespace.
+#
+# Two Applications in one file: Loki (log store) + Alloy (log collector/shipper).
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: loki
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: 'https://grafana.github.io/helm-charts'
+    targetRevision: 6.24.0   # TODO: verify latest `loki` chart version before applying
+    chart: loki
+    helm:
+      values: |
+        # SingleBinary + filesystem keeps this small for a 2-node cluster.
+        # For production scale, switch to SimpleScalable + S3 object storage.
+        deploymentMode: SingleBinary
+        loki:
+          auth_enabled: false
+          commonConfig:
+            replication_factor: 1
+          storage:
+            type: filesystem
+          schemaConfig:
+            configs:
+              - from: "2024-04-01"
+                store: tsdb
+                object_store: filesystem
+                schema: v13
+                index:
+                  prefix: loki_index_
+                  period: 24h
+        singleBinary:
+          replicas: 1
+          persistence:
+            enabled: true
+            size: 10Gi
+        # Disable the scalable-mode components in SingleBinary deployment.
+        backend: { replicas: 0 }
+        read: { replicas: 0 }
+        write: { replicas: 0 }
+        chunksCache:
+          enabled: false
+        resultsCache:
+          enabled: false
+        gateway:
+          enabled: false
+  destination:
+    server: 'https://kubernetes.default.svc'
+    namespace: monitoring
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: grafana-alloy
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: 'https://grafana.github.io/helm-charts'
+    targetRevision: 0.10.1   # TODO: verify latest `alloy` chart version before applying
+    chart: alloy
+    helm:
+      values: |
+        # Alloy runs as a DaemonSet, tails container logs, and ships them to Loki.
+        alloy:
+          configMap:
+            content: |-
+              discovery.kubernetes "pods" {
+                role = "pod"
+              }
+
+              discovery.relabel "pod_logs" {
+                targets = discovery.kubernetes.pods.targets
+                rule {
+                  source_labels = ["__meta_kubernetes_namespace"]
+                  target_label  = "namespace"
+                }
+                rule {
+                  source_labels = ["__meta_kubernetes_pod_name"]
+                  target_label  = "pod"
+                }
+                rule {
+                  source_labels = ["__meta_kubernetes_pod_container_name"]
+                  target_label  = "container"
+                }
+              }
+
+              loki.source.kubernetes "pods" {
+                targets    = discovery.relabel.pod_logs.output
+                forward_to = [loki.write.default.receiver]
+              }
+
+              loki.write "default" {
+                endpoint {
+                  # gateway is disabled in the Loki values above, so push straight
+                  # to the SingleBinary service on port 3100.
+                  url = "http://loki.monitoring.svc.cluster.local:3100/loki/api/v1/push"
+                }
+              }
+  destination:
+    server: 'https://kubernetes.default.svc'
+    namespace: monitoring
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

@@ -22,7 +22,8 @@ spec:
         - name: {{ $name }}
           image: "{{ $svc.image.repository }}:{{ $svc.image.tag }}"
           ports:
-            - containerPort: {{ $svc.port }}
+            - name: http
+              containerPort: {{ $svc.port }}
           {{- if or $svc.env $svc.usesSecrets }}
           envFrom:
             {{- if $svc.env }}

@@ -1,0 +1,24 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: sports-store
+  namespace: argocd
+spec:
+  project: sports-store
+  source:
+    repoURL: https://github.com/final-project-2026-devops/sports-store-deployments.git
+    targetRevision: main
+    path: helm/sports-store
+    helm:
+      valueFiles:
+        - values.yaml
+        - values-aws.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: sports-store
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

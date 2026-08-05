@@ -10,7 +10,7 @@ spec:
   source:
     repoURL: 'https://github.com/final-project-2026-devops/sports-store-deployments.git'
     targetRevision: HEAD
-    path: monitoring/dashboards
+    path: monitoring
     directory:
       recurse: true
   destination:

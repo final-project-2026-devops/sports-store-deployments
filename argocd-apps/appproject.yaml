@@ -1,0 +1,24 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: sports-store
+  namespace: argocd
+spec:
+  description: Sports Store platform — scoped to this repo and namespace only
+
+  sourceRepos:
+    - https://github.com/final-project-2026-devops/sports-store-deployments.git
+
+  destinations:
+    - namespace: sports-store
+      server: https://kubernetes.default.svc
+    - namespace: monitoring
+      server: https://kubernetes.default.svc
+
+  clusterResourceWhitelist:
+    - group: ''
+      kind: Namespace
+
+  namespaceResourceWhitelist:
+    - group: '*'
+      kind: '*'
