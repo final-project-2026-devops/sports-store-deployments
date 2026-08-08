@@ -72,4 +72,4 @@ services:
 # Binds the gateway Service to the ALB target group Eli's Terraform already
 # created (not a K8s Ingress — the ALB isn't Ingress-managed). Only set here,
 # not in values.yaml, so local kind installs don't try to create this.
-gatewayTargetGroupArn: arn:aws:elasticloadbalancing:us-east-1:977237815280:targetgroup/cloudcart-production-gateway-tg/fe6e5dedf9bd6908
+gatewayTargetGroupArn: arn:aws:elasticloadbalancing:us-east-1:977237815280:targetgroup/cloudcart-production-gateway-tg/9e560c175e447692
